@@ -1,0 +1,12 @@
+# dependencies
+/node_modules
+
+# misc
+.DS_Store
+
+# testing
+/uploads
+populatedb.js
+
+# local env files
+.env
