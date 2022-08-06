@@ -6,7 +6,7 @@ const PostSchema = new Schema(
     {
         post_id: { type: Number },
         thread_id: { type: Number, required: true },
-        name: { type: String, default: 'anonymous' },
+        name: { type: String },
         comment: { type: String, maxLength: 1000 },
         created_at: { type: Number, default: Math.floor(Date.now() / 1000), required: true },
         poster: { type: String },
@@ -37,5 +37,13 @@ const PostSchema = new Schema(
 function hasAttachment(value) {
     return value.filename != null;
 }
+
+// Remove name field that is empty string or null
+PostSchema.pre('save', function (next) {
+    if (this.name === '' || this.name === null) {
+        this.name = undefined;
+    }
+    next();
+});
 
 module.exports = mongoose.model('Post', PostSchema);

@@ -9,7 +9,7 @@ const ThreadSchema = new Schema(
 
         post_id: { type: Number, required: true },
         thread_id: { type: Number, default: 0, required: true },
-        name: { type: String, default: 'anonymous' },
+        name: { type: String },
         comment: { type: String, maxLength: 1000 },
         // created_on: { type: Date, default: Date.now, required: true },
         created_at: Number,
@@ -54,6 +54,14 @@ const ThreadSchema = new Schema(
 
 ThreadSchema.pre('remove', function (next) {
     this.model('Post').deleteMany({ thread_id: this.thread_id }, next);
+});
+
+// Remove name field that is empty string or null
+ThreadSchema.pre('save', function (next) {
+    if (this.name === '' || this.name === null) {
+        this.name = undefined;
+    }
+    next();
 });
 
 
