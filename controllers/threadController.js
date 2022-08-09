@@ -1,7 +1,9 @@
 const Thread = require('../models/thread');
 const Post = require('../models/post');
-const { upload } = require('../services/file-upload.service');
 
+const { nextSequence } = require('../services/generate-id.service');
+
+const { upload } = require('../services/file-upload.service');
 const imageProcessor = require('../services/image-resize.service')
 
 const { body, validationResult } = require("express-validator");
@@ -94,12 +96,16 @@ exports.thread_create = [
 
         // Extract the validation errors from a request.
         const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            // // There are errors. Render the form again with sanitized values/error messages.
+            res.status(400).send('There are errors in form input');
+            return;
+        }
 
         let file = {};
         // There is File upload
         if (req.file) {
             const metadata = await imageProcessor.imageExif('./' + req.file.path);
-
             const thumbnail = await imageProcessor.imageResize('./' + req.file.path, true);
             console.log(thumbnail);
 
@@ -118,33 +124,22 @@ exports.thread_create = [
             console.log(req.file);
         }
 
-        // Create a Thread object with escaped and trimmed data.
-        const thread = new Thread(
-            {
-                post_id: 404,
-                ...req.body, // subject, comment, 
-                ...file
-            }
-        );
-
-        if (!errors.isEmpty()) {
-            // // There are errors. Render the form again with sanitized values/error messages.
-            res.status(400).send('There are errors in form input');
+        // Create a Thread with escaped and trimmed data.
+        try {
+            const postId = await nextSequence();
+            await Thread.create(
+                {
+                    post_id: postId,
+                    ...req.body, // comment, thread_id
+                    ...file
+                }
+            );
+            res.status(201).send('A New Thread has been created');
             return;
+        } catch (error) {
+            console.log(error);
 
-        }
-        else {
-            // Data from form is valid.
-            try {
-                await thread.save();
-                res.status(201).send('A New Thread has been created');
-                return;
-            } catch (error) {
-                console.log(error);
-
-                return res.status(400).send('Replying to a Board that does not Exist');
-            }
-
+            return res.status(400).send('Replying to a Board that does not Exist');
         }
     }
 ];

@@ -1,8 +1,8 @@
 const Post = require('../models/post');
 const Thread = require('../models/thread');
-
 const Counter = require('../models/counter');
 
+const { nextSequence } = require('../services/generate-id.service');
 
 const { upload } = require('../services/file-upload.service');
 const imageProcessor = require('../services/image-resize.service')
@@ -27,12 +27,16 @@ exports.post_create = [
 
         // Extract the validation errors from a request.
         const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            // // There are errors. Render the form again with sanitized values/error messages.
+            res.status(400).send('There are errors in form input');
+            return;
+        }
 
         let file = {};
         // There is File upload
         if (req.file) {
             const metadata = await imageProcessor.imageExif('./' + req.file.path);
-
             const thumbnail = await imageProcessor.imageResize('./' + req.file.path, true);
             console.log(thumbnail);
 
@@ -49,61 +53,47 @@ exports.post_create = [
             console.log('File uploaded!');
             console.log(req.file);
         }
+        const newPostId = await nextSequence();
 
-        // Create a Thread object with escaped and trimmed data.
-        const post = new Post(
-            {
-                post_id: 404,
-                ...req.body, // comment, thread_id
-                ...file
-            }
-        );
-
-        if (!errors.isEmpty()) {
-            // // There are errors. Render the form again with sanitized values/error messages.
-            res.status(400).send('There are errors in form input');
-            return;
-
-        }
-        else {
-            // Data from form is valid.
-            try {
-                const thread = Thread.findOne({ 'post_id': req.body.thread_id })
-                    .lean()
-                    .exec();
-
-                if (thread) {
-
-                    // 
-                    const postNo = await Counter.findOne().exec();
-                    // console.log(`globacounter id: ${JSON.stringify(postNo)}`);
-                    console.log(`globacounter id: ${postNo}`);
-                    const newPostNo = postNo.seq_value + 1;
-
-                    await post.save();
-
-                    if (req.body.quotePostIds) {
-                        addReply(newPostNo, parseInt(req.body.quotePostIds[0]));
-
+        // Create a Post with escaped and trimmed data.
+        try {
+            if (validThread(req.body.thread_id)) {
+                await Post.create(
+                    {
+                        post_id: newPostId,
+                        ...req.body, // comment, thread_id
+                        ...file
                     }
+                );
 
-
-
-                    res.status(201).send('Post Successful!');
-                    return;
+                if (req.body.quotePostIds) {
+                    addReply(newPostId, parseInt(req.body.quotePostIds[0]));
                 }
 
-            } catch (error) {
-                // or invalid form check
-                console.log(error);
-
-                return res.status(400).send('Replying to a Thread that does not Exist');
-
+                res.status(201).send('Post Successful!');
+                return;
             }
 
+        } catch (error) {
+            // or invalid form check
+            console.log(error);
+
+            return res.status(400).send('Replying to a Thread that does not Exist');
         }
+
     }
 ];
+
+
+//Check if the given Thread exists
+async function validThread(threadId) {
+    const thread = Thread.findOne({ 'post_id': threadId })
+        .lean()
+        .exec();
+
+    return thread;
+}
+
 
 async function addReply(postFrom, postTo) {
     const added = await Post.updateOne(
