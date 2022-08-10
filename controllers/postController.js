@@ -37,7 +37,7 @@ exports.post_create = [
         // There is File upload
         if (req.file) {
             const metadata = await imageProcessor.imageExif('./' + req.file.path);
-            const thumbnail = await imageProcessor.imageResize('./' + req.file.path, true);
+            const thumbnail = await imageProcessor.imageResize('./' + req.file.path);
             console.log(thumbnail);
 
             file = {
@@ -67,7 +67,17 @@ exports.post_create = [
                 );
 
                 if (req.body.quotePostIds) {
-                    addReply(newPostId, parseInt(req.body.quotePostIds[0]));
+                    if (req.body.quotePostIds[0] == req.body.thread_id) {
+                        addReplyToOP(newPostId, parseInt(req.body.quotePostIds[0]));
+                    } else {
+                        addReply(newPostId, parseInt(req.body.quotePostIds[0]));
+                    }
+                    // addReply(newPostId, parseInt(req.body.quotePostIds[0]));
+                }
+
+                updateThreadReplyCount(req.body.thread_id);
+                if (req.file) {
+                    updateThreadImageCount(req.body.thread_id);
                 }
 
                 res.status(201).send('Post Successful!');
@@ -94,6 +104,22 @@ async function validThread(threadId) {
     return thread;
 }
 
+async function updateThreadReplyCount(threadId) {
+    filter = { 'post_id': threadId };
+    update = { $inc: { replies: 1 } };
+
+    const res = await Thread.updateOne(filter, update);
+    console.log(`Reply count updated: ${res.acknowledged}`);
+}
+
+async function updateThreadImageCount(threadId) {
+    filter = { 'post_id': threadId };
+    update = { $inc: { images: 1 } };
+
+    const res = await Thread.updateOne(filter, update);
+    console.log(`Image count updated: ${res.acknowledged}`);
+}
+
 
 async function addReply(postFrom, postTo) {
     const added = await Post.updateOne(
@@ -103,6 +129,18 @@ async function addReply(postFrom, postTo) {
     );
     console.log(`post from No. ${postFrom} added to post No${postTo} replies`);
     console.log(`posts modified: ${added.modifiedCount}`);
+    console.log(`Reply pushed: ${added.acknowledged}`);
+}
+
+async function addReplyToOP(postFrom, postTo) {
+    const added = await Thread.updateOne(
+        { post_id: postTo },
+        { $push: { last_replies: postFrom } },
+
+    );
+    console.log(`post from No. ${postFrom} added to post No${postTo} replies`);
+    console.log(`posts modified: ${added.modifiedCount}`);
+    console.log(`Reply pushed: ${added.acknowledged}`);
 }
 
 

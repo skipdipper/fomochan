@@ -39,7 +39,9 @@ const ThreadSchema = new Schema(
         slug: { type: String },
         // last_modified: { type: Date, default: Date.now, required: true },
         last_modified: Number,
-        last_replies: [{ type: Schema.Types.ObjectId, ref: 'Post' }],
+        // last_replies: [{ type: Schema.Types.ObjectId, ref: 'Post' }],
+        last_replies: [{ type: Number }],
+
 
         __v: { type: Number, select: false }
     },
