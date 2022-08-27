@@ -59,8 +59,8 @@ app.use(function (req, res, next) {
 app.use('/', indexRouter);
 app.use('/user', userRouter);
 app.use('/boards', boardRouter);
-app.use(['/a', '/b', '/c', '/jp', '/vt'], catalogRouter);  // Add catalog routes to middleware chain.
-
+// app.use(['/a', '/b', '/c', '/jp', '/vt'], catalogRouter);  // Add catalog routes to middleware chain.
+app.use(['/a', '/g', '/v'], catalogRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -74,9 +74,12 @@ app.use(function (err, req, res, next) {
   res.locals.error = req.app.get('env') === 'development' ? err : {};
 
   // render the error page
-  res.status(err.status || 500);
+  // res.status(err.status || 500);
   // console.log(err)
-  res.render('error');
+  // res.render('error');
+
+  // send as json instead of rendering html
+  res.status(err.status || 500).json({ error: err });
 });
 
 module.exports = app;

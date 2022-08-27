@@ -1,5 +1,5 @@
 const Post = require('../models/post');
-const Thread = require('../models/thread');
+const { Thread } = require('../models/thread');
 const Counter = require('../models/counter');
 
 const { nextSequence } = require('../services/generate-id.service');

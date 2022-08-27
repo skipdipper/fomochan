@@ -1,4 +1,4 @@
-const Thread = require('../models/thread');
+const { getThreadCollection } = require('../models/thread');
 const Post = require('../models/post');
 
 const { nextSequence } = require('../services/generate-id.service');
@@ -15,43 +15,41 @@ const { authUser, authAdmin } = require('../middleware/user-auth.middleware');
 
 var async = require('async');
 
-
-
-// Read all Threads.
+// GET list of Threads.
 exports.thread_list = function (req, res) {
+    const Thread = getThreadCollection(req.baseUrl);
 
-    Thread.find({}, '-_id') // exclude the _id and __v feilds
+    Thread.find({}, '-_id')
         .lean()
         .exec(function (err, list_threads) {
             if (err) { return next(err); }
-            //Successful, so send json
             res.status(200).json(list_threads);
         });
-
 };
 
+// Get list of Threads matching search query
 exports.thread_search = function (req, res) {
-
-    // const { search } = req.body;
-    const query = req.params.query
+    const query = req.params.query;
+    const Thread = getThreadCollection(req.baseUrl);
 
     // Search query matches a threads Subject or Comment
     Thread.find({ $or: [{ subject: { $regex: query, $options: 'i' } }, { comment: { $regex: query, $options: 'i' } }] }, '-_id')
         .lean()
         .exec(function (err, list_threads) {
             if (err) { return next(err); }
-            //Successful, so send json
             res.status(200).json(list_threads);
         });
 };
 
 
-// Read single Thread.
+// Get a single Thread.
 exports.thread_replies = async function (req, res, next) {
     let op = {};
 
+    const Thread = getThreadCollection(req.baseUrl);
+
     try {
-        const thread = await Thread.findOne({ post_id: req.params.id }, '-_id') // exclude _id feild
+        const thread = await Thread.findOne({ post_id: req.params.id }, '-_id')
             .lean()
             .exec();
 
@@ -62,11 +60,10 @@ exports.thread_replies = async function (req, res, next) {
         }
     } catch (error) {
         return res.status(500).json({ error: 500, message: 'Internal server error!' });
-        // return next(error);
     }
 
 
-    Post.find({ 'thread_id': req.params.id }, '-_id') // exclude the _id and __v feilds
+    Post.find({ 'thread_id': req.params.id }, '-_id')
         .lean()
         .exec(function (err, list_replies) {
             if (err) { return next(err); }
@@ -80,11 +77,11 @@ exports.thread_replies = async function (req, res, next) {
 };
 
 
-// Creat new Thread
+// Create a new Thread
 exports.thread_create = [
     // Multer first middleware
     upload.single('file'),
-    verifyHuman,
+    // verifyHuman,
 
 
     // Validate and sanitize the name field.
@@ -93,6 +90,8 @@ exports.thread_create = [
 
     // Process request after validation and sanitization.
     async (req, res, next) => {
+
+        const Thread = getThreadCollection(req.baseUrl);
 
         // Extract the validation errors from a request.
         const errors = validationResult(req);
@@ -134,6 +133,7 @@ exports.thread_create = [
                     ...file
                 }
             );
+
             res.status(201).send('A New Thread has been created');
             return;
         } catch (error) {
@@ -144,6 +144,7 @@ exports.thread_create = [
     }
 ];
 
+// Delete a Thread
 exports.thread_delete = [
     // require admin auth
     authUser,
@@ -151,6 +152,7 @@ exports.thread_delete = [
 
     async (req, res, next) => {
 
+        const Thread = getThreadCollection(req.baseUrl);
 
         async.parallel({
             // Delete the Thread OP

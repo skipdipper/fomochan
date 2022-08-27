@@ -67,4 +67,30 @@ ThreadSchema.pre('save', function (next) {
 });
 
 
-module.exports = mongoose.model('Thread', ThreadSchema);
+// module.exports = mongoose.model('Thread', ThreadSchema);
+const Thread = mongoose.model('Thread', ThreadSchema);
+const GThread = mongoose.model('GThread', ThreadSchema);
+const VThread = mongoose.model('VThread', ThreadSchema);
+
+const threadCollections = {
+    "/a": Thread,
+    "/g": GThread,
+    "/v": VThread
+};
+
+// Helper function to get the Thread Collection for a specific board
+function getThreadCollection(board) {
+    if (!(threadCollections.hasOwnProperty(board))) {
+        throw new Error(`Unknown Collection for board ${board}`);
+    }
+
+    return threadCollections[board];
+}
+
+
+module.exports = {
+    Thread,
+    GThread,
+    VThread,
+    getThreadCollection
+}

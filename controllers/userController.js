@@ -1,8 +1,6 @@
 const User = require('../models/user');
 const Token = require('../models/token');
-
-const Thread = require('../models/thread');
-
+const { Thread } = require('../models/thread');
 
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
