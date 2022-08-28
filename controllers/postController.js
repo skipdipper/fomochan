@@ -1,5 +1,5 @@
-const Post = require('../models/post');
-const { Thread } = require('../models/thread');
+const { getPostCollection } = require('../models/post');
+const { getThreadCollection } = require('../models/thread');
 const Counter = require('../models/counter');
 
 const { nextSequence } = require('../services/generate-id.service');
@@ -57,7 +57,8 @@ exports.post_create = [
 
         // Create a Post with escaped and trimmed data.
         try {
-            if (validThread(req.body.thread_id)) {
+            if (validThread(req.body.thread_id, req.baseUrl)) {
+                const Post = getPostCollection(req.baseUrl);
                 await Post.create(
                     {
                         post_id: newPostId,
@@ -68,16 +69,16 @@ exports.post_create = [
 
                 if (req.body.quotePostIds) {
                     if (req.body.quotePostIds[0] == req.body.thread_id) {
-                        addReplyToOP(newPostId, parseInt(req.body.quotePostIds[0]));
+                        addReplyToOP(newPostId, parseInt(req.body.quotePostIds[0]), req.baseUrl);
                     } else {
-                        addReply(newPostId, parseInt(req.body.quotePostIds[0]));
+                        addReply(newPostId, parseInt(req.body.quotePostIds[0]), req.baseUrl);
                     }
                     // addReply(newPostId, parseInt(req.body.quotePostIds[0]));
                 }
 
-                updateThreadReplyCount(req.body.thread_id);
+                updateThreadReplyCount(req.body.thread_id, req.baseUrl);
                 if (req.file) {
-                    updateThreadImageCount(req.body.thread_id);
+                    updateThreadImageCount(req.body.thread_id, req.baseUrl);
                 }
 
                 res.status(201).send('Post Successful!');
@@ -96,7 +97,8 @@ exports.post_create = [
 
 
 //Check if the given Thread exists
-async function validThread(threadId) {
+async function validThread(threadId, board) {
+    const Thread = getThreadCollection(board);
     const thread = Thread.findOne({ 'post_id': threadId })
         .lean()
         .exec();
@@ -104,24 +106,27 @@ async function validThread(threadId) {
     return thread;
 }
 
-async function updateThreadReplyCount(threadId) {
+async function updateThreadReplyCount(threadId, board) {
     filter = { 'post_id': threadId };
     update = { $inc: { replies: 1 } };
 
+    const Thread = getThreadCollection(board);
     const res = await Thread.updateOne(filter, update);
     console.log(`Reply count updated: ${res.acknowledged}`);
 }
 
-async function updateThreadImageCount(threadId) {
+async function updateThreadImageCount(threadId, board) {
     filter = { 'post_id': threadId };
     update = { $inc: { images: 1 } };
 
+    const Thread = getThreadCollection(board);
     const res = await Thread.updateOne(filter, update);
     console.log(`Image count updated: ${res.acknowledged}`);
 }
 
 
-async function addReply(postFrom, postTo) {
+async function addReply(postFrom, postTo, board) {
+    const Post = getPostCollection(board);
     const added = await Post.updateOne(
         { post_id: postTo },
         { $push: { replies: postFrom } },
@@ -132,7 +137,8 @@ async function addReply(postFrom, postTo) {
     console.log(`Reply pushed: ${added.acknowledged}`);
 }
 
-async function addReplyToOP(postFrom, postTo) {
+async function addReplyToOP(postFrom, postTo, board) { 
+    const Thread = getThreadCollection(board);
     const added = await Thread.updateOne(
         { post_id: postTo },
         { $push: { last_replies: postFrom } },
@@ -150,6 +156,7 @@ exports.post_delete = [
 
     async (req, res) => {
         try {
+            const Post = getPostCollection(req.baseUrl);
             deleted = await Post.deleteOne({ post_id: req.params.id });
 
             if (deleted.deleteCount == 0) {

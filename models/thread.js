@@ -89,8 +89,5 @@ function getThreadCollection(board) {
 
 
 module.exports = {
-    Thread,
-    GThread,
-    VThread,
     getThreadCollection
 }

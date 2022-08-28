@@ -1,5 +1,5 @@
 const { getThreadCollection } = require('../models/thread');
-const Post = require('../models/post');
+const { getPostCollection } = require('../models/post');
 
 const { nextSequence } = require('../services/generate-id.service');
 
@@ -46,9 +46,8 @@ exports.thread_search = function (req, res) {
 exports.thread_replies = async function (req, res, next) {
     let op = {};
 
-    const Thread = getThreadCollection(req.baseUrl);
-
     try {
+        const Thread = getThreadCollection(req.baseUrl);
         const thread = await Thread.findOne({ post_id: req.params.id }, '-_id')
             .lean()
             .exec();
@@ -62,7 +61,7 @@ exports.thread_replies = async function (req, res, next) {
         return res.status(500).json({ error: 500, message: 'Internal server error!' });
     }
 
-
+    const Post = getPostCollection(req.baseUrl);
     Post.find({ 'thread_id': req.params.id }, '-_id')
         .lean()
         .exec(function (err, list_replies) {
@@ -90,9 +89,6 @@ exports.thread_create = [
 
     // Process request after validation and sanitization.
     async (req, res, next) => {
-
-        const Thread = getThreadCollection(req.baseUrl);
-
         // Extract the validation errors from a request.
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -126,6 +122,7 @@ exports.thread_create = [
         // Create a Thread with escaped and trimmed data.
         try {
             const postId = await nextSequence();
+            const Thread = getThreadCollection(req.baseUrl);
             await Thread.create(
                 {
                     post_id: postId,
@@ -152,17 +149,17 @@ exports.thread_delete = [
 
     async (req, res, next) => {
 
-        const Thread = getThreadCollection(req.baseUrl);
-
         async.parallel({
             // Delete the Thread OP
             op: function (callback) {
+                const Thread = getThreadCollection(req.baseUrl);
                 Thread.deleteOne({ post_id: req.params.id })
                     .exec(callback);
             },
 
             // Delete all reply posts to Thread
             posts: function (callback) {
+                const Post = getPostCollection(req.baseUrl);
                 Post.deleteMany({ post_id: req.params.id })
                     .exec(callback);
             },

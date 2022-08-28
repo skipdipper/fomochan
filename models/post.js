@@ -46,4 +46,28 @@ PostSchema.pre('save', function (next) {
     next();
 });
 
-module.exports = mongoose.model('Post', PostSchema);
+
+// module.exports = mongoose.model('Post', PostSchema);
+const Post = mongoose.model('Post', PostSchema);
+const GPost = mongoose.model('GPost', PostSchema);
+const VPost = mongoose.model('VPost', PostSchema);
+
+const postCollections = {
+    "/a": Post,
+    "/g": GPost,
+    "/v": VPost
+};
+
+// Helper function to get the Post Collection for a specific board
+function getPostCollection(board) {
+    if (!(postCollections.hasOwnProperty(board))) {
+        throw new Error(`Unknown Collection for board ${board}`);
+    }
+
+    return postCollections[board];
+}
+
+
+module.exports = {
+    getPostCollection
+}

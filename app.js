@@ -23,6 +23,11 @@ mongoose.connect(process.env.MONGODB_CONNECTION, { useNewUrlParser: true, useUni
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
+// express behind NGINX proxy
+// X-Forward-For to identify originating IP address of client instead of internal
+// IP address of reverse proxy
+app.set('trust proxy', 'loopback') // specify a single subnet
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -61,6 +66,12 @@ app.use('/user', userRouter);
 app.use('/boards', boardRouter);
 // app.use(['/a', '/b', '/c', '/jp', '/vt'], catalogRouter);  // Add catalog routes to middleware chain.
 app.use(['/a', '/g', '/v'], catalogRouter);
+
+// Client connection test
+app.get("/client", (req, res) => {
+  const {ip, hostname, protocol, secure, xhr} = req;
+  return res.json({ ip, hostname, protocol, secure, xhr });
+});
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
