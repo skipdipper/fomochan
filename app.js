@@ -10,6 +10,7 @@ const userRouter = require('./routes/user');
 const boardRouter = require('./routes/board.route')
 const catalogRouter = require('./routes/catalog');
 
+const { fileNotFoundErrorHandler } = require('./middleware/file-fallback.middleware');
 const { authenticateToken } = require('./middleware/jwt-auth.middleware');
 
 
@@ -42,7 +43,9 @@ app.use(cookieParser());
 app.use(authenticateToken);
 
 // Temporary Static Image Host directory for user-generated content
-app.use('/img', express.static(path.join(__dirname, 'uploads')))
+app.use('/img', express.static(path.join(__dirname, 'uploads'), { fallthrough: false }));
+// Temporary error handler for express.static when File Not Found 
+app.use(fileNotFoundErrorHandler);
 
 
 // CORS Policy
@@ -69,7 +72,7 @@ app.use(['/a', '/g', '/v'], catalogRouter);
 
 // Client connection test
 app.get("/client", (req, res) => {
-  const {ip, hostname, protocol, secure, xhr} = req;
+  const { ip, hostname, protocol, secure, xhr } = req;
   return res.json({ ip, hostname, protocol, secure, xhr });
 });
 
